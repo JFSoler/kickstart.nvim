@@ -87,6 +87,9 @@ P.S. You can delete this when you're done too. It's your config now! :)
 -- NOTE: Particular configuration set by fsoler
 vim.opt.foldmethod = 'indent'
 vim.opt.foldlevelstart = 99
+vim.opt.spell = true
+vim.opt.spelloptions = 'camel'
+vim.opt.spelllang = { 'en' }
 
 -- Set <space> as the leader key
 -- See `:help mapleader`
@@ -106,7 +109,7 @@ vim.g.have_nerd_font = true
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
-vim.opt.relativenumber = false
+vim.opt.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -610,6 +613,7 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
+        codebook = {},
         ruby_lsp = {
           mason = false,
           cmd = { vim.fn.expand '~/.rbenv/shims/ruby-lsp' },
@@ -905,19 +909,28 @@ require('lazy').setup({
     branch = 'main',
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
-      local parsers =
-        { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'go', 'ruby', 'rust', 'typescript' }
-      require('nvim-treesitter.configs').setup {
-        ignore_install = {},
-        modules = {},
-        ensure_installed = parsers,
-        sync_install = false,
-        auto_install = true,
-        highlight = { enable = true },
-        indent = { enable = true },
-        vim.filetype.add {
-          extension = { avsc = 'json' },
-        },
+      local parsers = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+        'go',
+        'json',
+        'ruby',
+        'rust',
+        'typescript',
+        'yaml',
+      }
+      require('nvim-treesitter').install(parsers)
+      vim.filetype.add {
+        extension = { avsc = 'json' },
       }
       vim.api.nvim_create_autocmd('FileType', {
         callback = function(args)
