@@ -87,6 +87,9 @@ P.S. You can delete this when you're done too. It's your config now! :)
 -- NOTE: Particular configuration set by fsoler
 vim.opt.foldmethod = 'indent'
 vim.opt.foldlevelstart = 99
+vim.opt.spell = true
+vim.opt.spelloptions = 'camel'
+vim.opt.spelllang = { 'en' }
 
 -- Set <space> as the leader key
 -- See `:help mapleader`
@@ -106,7 +109,7 @@ vim.g.have_nerd_font = true
 vim.o.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
-vim.opt.relativenumber = false
+vim.opt.relativenumber = true
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.o.mouse = 'a'
@@ -610,6 +613,7 @@ require('lazy').setup({
       local servers = {
         -- clangd = {},
         -- gopls = {},
+        codebook = {},
         ruby_lsp = {
           mason = false,
           cmd = { vim.fn.expand '~/.rbenv/shims/ruby-lsp' },
@@ -632,7 +636,8 @@ require('lazy').setup({
         --    https://github.com/pmizio/typescript-tools.nvim
         --
         -- But for many setups, the LSP (`ts_ls`) will work just fine
-        ts_ls = {},
+        -- ts_ls = {},
+        vtsls = {},
 
         stylua = {}, -- Used to format Lua code
 
@@ -765,6 +770,9 @@ require('lazy').setup({
         },
         opts = {},
       },
+      {
+        'giuxtaposition/blink-cmp-copilot', -- to add copilot suggestions as a source
+      },
     },
     ---@module 'blink.cmp'
     ---@type blink.cmp.Config
@@ -807,10 +815,21 @@ require('lazy').setup({
         -- By default, you may press `<c-space>` to show the documentation.
         -- Optionally, set `auto_show = true` to show the documentation after a delay.
         documentation = { auto_show = false, auto_show_delay_ms = 500 },
+        ghost_text = {
+          enabled = true, -- Enables Copilot ghost text
+        },
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets' },
+        default = { 'lsp', 'path', 'snippets', 'buffer', 'copilot' },
+        providers = {
+          copilot = {
+            name = 'copilot',
+            module = 'blink-cmp-copilot',
+            score_offset = 100,
+            async = true,
+          },
+        },
       },
 
       snippets = { preset = 'luasnip' },
@@ -905,19 +924,29 @@ require('lazy').setup({
     branch = 'main',
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter-intro`
     config = function()
-      local parsers =
-        { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc', 'go', 'ruby', 'rust', 'typescript' }
-      require('nvim-treesitter.configs').setup {
-        ignore_install = {},
-        modules = {},
-        ensure_installed = parsers,
-        sync_install = false,
-        auto_install = true,
-        highlight = { enable = true },
-        indent = { enable = true },
-        vim.filetype.add {
-          extension = { avsc = 'json' },
-        },
+      local parsers = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+        'go',
+        'javascript',
+        'json',
+        'ruby',
+        'rust',
+        'typescript',
+        'yaml',
+      }
+      require('nvim-treesitter').install(parsers)
+      vim.filetype.add {
+        extension = { avsc = 'json' },
       }
       vim.api.nvim_create_autocmd('FileType', {
         callback = function(args)
@@ -963,7 +992,7 @@ require('lazy').setup({
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-  -- { import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!

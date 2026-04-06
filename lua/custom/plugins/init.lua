@@ -5,4 +5,15 @@
 
 ---@module 'lazy'
 ---@type LazySpec
-return {}
+return {
+  {
+    'zbirenbaum/copilot.lua',
+    event = 'InsertEnter',
+    config = function()
+      require('copilot').setup {
+        suggestion = { enabled = false }, -- handled by blink-cmp-copilot
+        panel = { enabled = false },
+      }
+    end,
+  },
+}
