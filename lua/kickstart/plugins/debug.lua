@@ -8,6 +8,25 @@
 
 ---@module 'lazy'
 ---@type LazySpec
+local CURRENT_TEST_CONFIG = 'Run current test'
+local CURRENT_TEST_FILE_CONFIG = 'Run current test file'
+
+-- Helper function to run a DAP config by name, resolving any functions in the config
+local function run_config(config_name)
+  local dap = require 'dap'
+  local ft = vim.bo.filetype
+  local target = vim.tbl_filter(function(c) return c.name == config_name end, dap.configurations[ft] or {})[1]
+  if not target then
+    vim.notify('Config "' .. config_name .. '" not found for ' .. ft, vim.log.levels.WARN)
+    return
+  end
+  local resolved = {}
+  for k, v in pairs(target) do
+    resolved[k] = type(v) == 'function' and v() or v
+  end
+  dap.run(resolved)
+end
+
 return {
   -- NOTE: Yes, you can install new plugins here!
   'mfussenegger/nvim-dap',
@@ -36,6 +55,11 @@ return {
     { '<leader>B', function() require('dap').set_breakpoint(vim.fn.input 'Breakpoint condition: ') end, desc = 'Debug: Set Breakpoint' },
     -- Toggle to see last session result. Without this, you can't see session output in case of unhandled exception.
     { '<F7>', function() require('dapui').toggle() end, desc = 'Debug: See last session result.' },
+    { '<leader>dr', function() require('dap').repl.open() end, desc = 'Debug: Open REPL' },
+    { '<leader>dl', function() require('dap').run_last() end, desc = 'Debug: Run Last' },
+    { '<leader>de', function() require('dapui').eval() end, desc = 'Debug: Eval expression', mode = { 'n', 'v' } },
+    { '<leader>df', function() run_config(CURRENT_TEST_FILE_CONFIG) end, desc = 'Debug: ' .. CURRENT_TEST_FILE_CONFIG },
+    { '<leader>dt', function() run_config(CURRENT_TEST_CONFIG) end, desc = 'Debug: ' .. CURRENT_TEST_CONFIG },
   },
   config = function()
     local dap = require 'dap'
@@ -55,6 +79,7 @@ return {
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
         'delve',
+        'js',
       },
     }
 
@@ -83,16 +108,16 @@ return {
     }
 
     -- Change breakpoint icons
-    -- vim.api.nvim_set_hl(0, 'DapBreak', { fg = '#e51400' })
-    -- vim.api.nvim_set_hl(0, 'DapStop', { fg = '#ffcc00' })
-    -- local breakpoint_icons = vim.g.have_nerd_font
-    --     and { Breakpoint = '', BreakpointCondition = '', BreakpointRejected = '', LogPoint = '', Stopped = '' }
-    --   or { Breakpoint = '●', BreakpointCondition = '⊜', BreakpointRejected = '⊘', LogPoint = '◆', Stopped = '⭔' }
-    -- for type, icon in pairs(breakpoint_icons) do
-    --   local tp = 'Dap' .. type
-    --   local hl = (type == 'Stopped') and 'DapStop' or 'DapBreak'
-    --   vim.fn.sign_define(tp, { text = icon, texthl = hl, numhl = hl })
-    -- end
+    vim.api.nvim_set_hl(0, 'DapBreak', { fg = '#e51400' })
+    vim.api.nvim_set_hl(0, 'DapStop', { fg = '#ffcc00' })
+    local breakpoint_icons = vim.g.have_nerd_font
+        and { Breakpoint = '', BreakpointCondition = '', BreakpointRejected = '', LogPoint = '', Stopped = '' }
+      or { Breakpoint = '●', BreakpointCondition = '⊜', BreakpointRejected = '⊘', LogPoint = '◆', Stopped = '⭔' }
+    for type, icon in pairs(breakpoint_icons) do
+      local tp = 'Dap' .. type
+      local hl = (type == 'Stopped') and 'DapStop' or 'DapBreak'
+      vim.fn.sign_define(tp, { text = icon, texthl = hl, numhl = hl })
+    end
 
     dap.listeners.after.event_initialized['dapui_config'] = dapui.open
     dap.listeners.before.event_terminated['dapui_config'] = dapui.close
@@ -106,5 +131,83 @@ return {
         detached = vim.fn.has 'win32' == 0,
       },
     }
+
+    dap.adapters = {
+      ['pwa-node'] = {
+        type = 'server',
+        host = '::1',
+        port = '${port}',
+        executable = {
+          command = 'js-debug-adapter',
+          args = {
+            '${port}',
+          },
+        },
+      },
+    }
+
+    for _, language in ipairs { 'typescript', 'javascript' } do
+      require('dap').configurations[language] = {
+        {
+          type = 'pwa-node',
+          request = 'launch',
+          name = CURRENT_TEST_FILE_CONFIG,
+          runtimeExecutable = 'node',
+          runtimeArgs = function()
+            return {
+              '${workspaceFolder}/node_modules/jest/bin/jest.js',
+              '--runInBand',
+              '--no-coverage',
+              '--testTimeout=60000',
+              vim.fn.expand '%:.',
+            }
+          end,
+          rootPath = '${workspaceFolder}',
+          cwd = '${workspaceFolder}',
+          console = 'integratedTerminal',
+          internalConsoleOptions = 'neverOpen',
+          resolveSourceMapLocations = { '${workspaceFolder}/**', '!**/node_modules/**' },
+          skipFiles = { '<node_internals>/**', '**/node_modules/**' },
+          sourceMaps = true,
+        },
+        {
+          type = 'pwa-node',
+          request = 'launch',
+          name = CURRENT_TEST_CONFIG,
+          runtimeExecutable = 'node',
+          runtimeArgs = function()
+            -- Walk up from cursor to find nearest it/test/describe name
+            local function get_test_name()
+              local linenr = vim.fn.line '.'
+              for i = linenr, 1, -1 do
+                local line = vim.fn.getline(i)
+                local name = line:match '%f[%w_]it%s*%(%s*[\'"](.+)[\'"]'
+                  or line:match '%f[%w_]test%s*%(%s*[\'"](.+)[\'"]'
+                  or line:match '%f[%w_]describe%s*%(%s*[\'"](.+)[\'"]'
+                if name then return name end
+              end
+              return ''
+            end
+            local name = get_test_name()
+            local args = {
+              './node_modules/jest/bin/jest.js',
+              '--runInBand',
+              '--no-coverage',
+              '--testTimeout=60000',
+              vim.fn.expand '%:.',
+            }
+            if name ~= '' then vim.list_extend(args, { '--testNamePattern', name }) end
+            return args
+          end,
+          rootPath = '${workspaceFolder}',
+          cwd = '${workspaceFolder}',
+          console = 'integratedTerminal',
+          internalConsoleOptions = 'neverOpen',
+          sourceMaps = true,
+          skipFiles = { '<node_internals>/**', '**/node_modules/**' },
+          resolveSourceMapLocations = { '${workspaceFolder}/**', '!**/node_modules/**' },
+        },
+      }
+    end
   end,
 }
