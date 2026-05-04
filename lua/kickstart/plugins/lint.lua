@@ -8,7 +8,12 @@ return {
   config = function()
     local lint = require 'lint'
     lint.linters_by_ft = {
+      -- javascript = { 'eslint_d' }, -- for .js
       markdown = { 'markdownlint' },
+      json = { 'jsonlint' },
+      -- ruby = { 'rubocop' },
+      -- typescript = { 'eslint_d' },
+      -- typescriptreact = { 'eslint_d' }, -- for .tsx
     }
 
     -- To allow other plugins to add linters to require('lint').linters_by_ft,

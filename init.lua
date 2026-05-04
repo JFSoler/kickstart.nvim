@@ -684,8 +684,9 @@ require('lazy').setup({
         'autopep8', -- Used to format python code
         'flake8', -- Used to format python code
         'eslint_d', -- Used to lint js code
+        'jsonlint', -- Used to lint json files
         'markdownlint', -- Used to lint markdown code
-        'prettier', -- Used to format typescript code
+        'prettierd', -- Used to format typescript code
         'rubocop', -- Used to format ruby code
       })
 
@@ -714,7 +715,7 @@ require('lazy').setup({
     ---@type conform.setupOpts
     opts = {
       notify_on_error = false,
-      format_on_save = function(bufnr)
+      format_after_save = function(bufnr)
         -- Disable "format_on_save lsp_fallback" for languages that don't
         -- have a well standardized coding style. You can add additional
         -- languages here or re-enable it for the disabled ones.
@@ -723,7 +724,7 @@ require('lazy').setup({
           return nil
         else
           return {
-            timeout_ms = 2000,
+            timeout_ms = 500,
             lsp_format = 'fallback',
           }
         end
@@ -734,9 +735,10 @@ require('lazy').setup({
         -- python = { "isort", "black" },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
-        javascript = { 'prettierd', 'prettier', stop_after_first = true },
-        typescript = { 'prettierd', 'prettier', stop_after_first = true },
-        typescriptreact = { 'prettierd', 'prettier', stop_after_first = true },
+        json = { 'prettierd', 'prettier', stop_after_first = false },
+        javascript = { 'eslint_d', 'prettierd', stop_after_first = false },
+        typescript = { 'eslint_d', 'prettierd', stop_after_first = false },
+        typescriptreact = { 'eslint_d', 'prettierd', stop_after_first = false },
       },
     },
   },
@@ -981,7 +983,7 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
