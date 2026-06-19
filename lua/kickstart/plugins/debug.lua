@@ -122,7 +122,7 @@ require('dap-go').setup {
 dap.adapters = {
   ['pwa-node'] = {
     type = 'server',
-    host = '127.0.0.1',
+    host = '::1',
     port = '${port}',
     executable = {
       command = 'js-debug-adapter',
@@ -133,6 +133,23 @@ dap.adapters = {
   },
 }
 
+local function is_vitest_configured(workspaceFolder)
+  return vim.fn.filereadable(workspaceFolder .. '/vitest.config.ts') == 1 or vim.fn.filereadable(workspaceFolder .. '/vitest.config.js') == 1
+end
+
+local function get_test_runner_args(workspaceFolder)
+  if is_vitest_configured(workspaceFolder) then return { workspaceFolder .. '/node_modules/.bin/vitest', 'run' } end
+  return { workspaceFolder .. '/node_modules/jest/bin/jest.js', '--no-coverage' }
+end
+
+local function get_runtime_args()
+  local args = get_test_runner_args(vim.fn.getcwd())
+  return vim.list_extend(args, {
+    '--testTimeout=60000',
+    vim.fn.expand '%:.',
+  })
+end
+
 for _, language in ipairs { 'typescript', 'javascript' } do
   require('dap').configurations[language] = {
     {
@@ -140,16 +157,7 @@ for _, language in ipairs { 'typescript', 'javascript' } do
       request = 'launch',
       name = CURRENT_TEST_FILE_CONFIG,
       runtimeExecutable = 'node',
-      runtimeArgs = function()
-        return {
-          -- '${workspaceFolder}/node_modules/jest/bin/jest.js',
-          '${workspaceFolder}/node_modules/.bin/vitest',
-          'run',
-          -- '--no-coverage',
-          '--testTimeout=60000',
-          vim.fn.expand '%:.',
-        }
-      end,
+      runtimeArgs = function() return get_runtime_args() end,
       rootPath = '${workspaceFolder}',
       cwd = '${workspaceFolder}',
       console = 'integratedTerminal',
@@ -176,16 +184,10 @@ for _, language in ipairs { 'typescript', 'javascript' } do
           end
           return ''
         end
+
+        local args = get_runtime_args()
+
         local name = get_test_name()
-        local args = {
-          -- './node_modules/jest/bin/jest.js',
-          '${workspaceFolder}/node_modules/.bin/vitest',
-          'run',
-          -- '--runInBand',
-          '--no-coverage',
-          '--testTimeout=60000',
-          vim.fn.expand '%:.',
-        }
         if name ~= '' then vim.list_extend(args, { '--testNamePattern', name }) end
         return args
       end,

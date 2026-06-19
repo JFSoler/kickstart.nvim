@@ -701,6 +701,12 @@ do
       mason = false,
       cmd = { vim.fn.expand '~/.rbenv/shims/ruby-lsp' },
     },
+    -- enable type checking and other features for Ruby with Sorbet
+    sorbet = {
+      mason = false,
+      cmd = { 'bundle', 'exec', 'srb', 'tc', '--lsp' },
+      filetypes = { 'ruby' },
+    },
     rust_analyzer = {},
     pylsp = {
       settings = {
@@ -981,6 +987,7 @@ do
     'ruby',
     'rust',
     'typescript',
+    'tsx',
     'yaml',
   }
   require('nvim-treesitter').install(parsers)
