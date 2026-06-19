@@ -4,12 +4,12 @@ vim.pack.add { 'https://github.com/mfussenegger/nvim-lint' }
 
 local lint = require 'lint'
 lint.linters_by_ft = {
-  -- javascript = { 'eslint_d' }, -- for .js
+  javascript = { 'eslint_d' }, -- for .js
   json = { 'jsonlint' },
   markdown = { 'markdownlint' }, -- Make sure to install `markdownlint` via mason / npm
   -- ruby = { 'rubocop' },
-  -- typescript = { 'eslint_d' },
-  -- typescriptreact = { 'eslint_d' }, -- for .tsx
+  typescript = { 'eslint_d' },
+  typescriptreact = { 'eslint_d' }, -- for .tsx
 }
 
 -- To allow other plugins to add linters to require('lint').linters_by_ft,
@@ -47,7 +47,7 @@ lint.linters_by_ft = {
 -- Create autocommand which carries out the actual linting
 -- on the specified events.
 local lint_augroup = vim.api.nvim_create_augroup('lint', { clear = true })
-vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost', 'InsertLeave' }, {
+vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost', 'InsertLeave', 'TextChanged' }, {
   group = lint_augroup,
   callback = function()
     -- Only run the linter in buffers that you can modify in order to
